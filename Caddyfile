@@ -1,0 +1,28 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Main site: dashboards + API
+{$DOMAIN} {
+	encode zstd gzip
+
+	@backend path /api/* /ws /ws/*
+	handle @backend {
+		reverse_proxy backend:8081
+	}
+	handle /admin* {
+		reverse_proxy admin:3001
+	}
+	handle /company* {
+		reverse_proxy company:3002
+	}
+	handle {
+		reverse_proxy cuetrack:3003
+	}
+}
+
+# Public customer portal (table QR codes point here)
+pay.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy pay:3004
+}

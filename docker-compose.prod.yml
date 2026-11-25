@@ -1,0 +1,97 @@
+name: cuetrack
+
+x-dashboard: &dashboard
+  restart: unless-stopped
+  depends_on: [backend]
+  networks: [internal]
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: iot-dashboard
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d iot-dashboard"]
+      interval: 10s
+      retries: 5
+    networks: [internal]
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # devices (password-protected)
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mosquitto-data:/mosquitto/data
+    networks: [internal]
+
+  backend:
+    build: ../iot-backend
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      mosquitto: { condition: service_started }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/iot-dashboard
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CUETRACK_CRED_KEY: ${CUETRACK_CRED_KEY}
+      MQTT_URL: tcp://mosquitto:1883
+      MQTT_USER: ${MQTT_BACKEND_USER}
+      MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD}
+      CORS_ORIGINS: https://${DOMAIN},https://pay.${DOMAIN}
+      PORTAL_BASE_URL: https://pay.${DOMAIN}
+      PAY_CALLBACK_BASE_URL: https://${DOMAIN}
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: INFO
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: INFO
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks: [internal]
+
+  admin:
+    <<: *dashboard
+    build: { context: ../iot-dashboard, args: { APP: admin-mfe, PORT: "3001" } }
+
+  company:
+    <<: *dashboard
+    build: { context: ../iot-dashboard, args: { APP: company-mfe, PORT: "3002" } }
+
+  cuetrack:
+    <<: *dashboard
+    build: { context: ../iot-dashboard, args: { APP: cuetrack, PORT: "3003" } }
+
+  pay:
+    <<: *dashboard
+    build: { context: ../iot-dashboard, args: { APP: cuetrack-pay, PORT: "3004" } }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [backend, admin, company, cuetrack, pay]
+    networks: [internal]
+
+volumes:
+  pgdata:
+  mosquitto-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal:
