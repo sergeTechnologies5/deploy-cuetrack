@@ -26,8 +26,25 @@ services:
     restart: unless-stopped
     ports:
       - "1883:1883"   # devices (password-protected)
+    environment:
+      MQTT_BACKEND_USER: ${MQTT_BACKEND_USER}
+      MQTT_BACKEND_PASSWORD: ${MQTT_BACKEND_PASSWORD}
+      MQTT_DEVICE_USER: ${MQTT_DEVICE_USER:-device}
+      MQTT_DEVICE_PASSWORD: ${MQTT_DEVICE_PASSWORD}
+    # (re)generate the password file from .env on every start - nothing to create by hand
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        : "$${MQTT_BACKEND_PASSWORD:?set MQTT_BACKEND_PASSWORD in .env}" "$${MQTT_DEVICE_PASSWORD:?set MQTT_DEVICE_PASSWORD in .env}"
+        rm -f /mosquitto/data/passwd
+        mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_BACKEND_USER" "$$MQTT_BACKEND_PASSWORD"
+        mosquitto_passwd -b /mosquitto/data/passwd "$$MQTT_DEVICE_USER" "$$MQTT_DEVICE_PASSWORD"
+        chown mosquitto:mosquitto /mosquitto/data/passwd && chmod 0700 /mosquitto/data/passwd
+        exec mosquitto -c /mosquitto/config/mosquitto.conf
     volumes:
-      - ./mosquitto:/mosquitto/config
+      - ./mosquitto:/mosquitto/config:ro
       - mosquitto-data:/mosquitto/data
     networks: [internal]
 
