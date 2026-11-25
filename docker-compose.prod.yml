@@ -89,6 +89,12 @@ services:
     <<: *dashboard
     build: { context: ../iot-dashboard, args: { APP: cuetrack-pay, PORT: "3004" } }
 
+  # Brace Technologies company website (static Vite build)
+  landing:
+    build: ../brace-technologies-landing-page
+    restart: unless-stopped
+    networks: [internal]
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -97,13 +103,14 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN}
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env (company website domain)}
       ACME_EMAIL: ${ACME_EMAIL}
       CADDY_TLS_MODE: ${CADDY_TLS_MODE:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    depends_on: [backend, admin, company, cuetrack, pay]
+    depends_on: [backend, admin, company, cuetrack, pay, landing]
     networks: [internal]
 
 volumes:

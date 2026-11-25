@@ -24,9 +24,15 @@
 	}
 }
 
-# www -> bare domain
-www.{$DOMAIN} {
-	redir https://{$DOMAIN}{uri} permanent
+# Company website (Brace Technologies landing page)
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy landing:80
+}
+
+# www -> bare company domain
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
 }
 
 # Public customer portal (table QR codes point here)
