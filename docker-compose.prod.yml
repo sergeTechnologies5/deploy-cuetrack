@@ -27,8 +27,7 @@ services:
     ports:
       - "1883:1883"   # devices (password-protected)
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto:/mosquitto/config
       - mosquitto-data:/mosquitto/data
     networks: [internal]
 
@@ -50,6 +49,8 @@ services:
       CORS_ORIGINS: https://${DOMAIN},https://pay.${DOMAIN}
       PORTAL_BASE_URL: https://pay.${DOMAIN}
       PAY_CALLBACK_BASE_URL: https://${DOMAIN}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-phineas@cuetrack.io}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: INFO
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: INFO
       JAVA_OPTS: -Xms256m -Xmx512m
