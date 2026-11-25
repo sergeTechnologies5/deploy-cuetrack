@@ -1,5 +1,8 @@
 {
 	email {$ACME_EMAIL}
+	# LAN/local testing: set CADDY_TLS_MODE=local_certs in .env to use Caddy's own CA instead of
+	# public certificates (Let's Encrypt/ZeroSSL can't validate private IPs). Leave empty in production.
+	{$CADDY_TLS_MODE}
 }
 
 # Main site: dashboards + API
