@@ -24,6 +24,11 @@
 	}
 }
 
+# www -> bare domain
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
 # Public customer portal (table QR codes point here)
 pay.{$DOMAIN} {
 	encode zstd gzip
